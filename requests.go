@@ -60,9 +60,6 @@ func (h *MHttp) GetCookies() string {
 }
 
 func (h *MHttp) SetCookie(key string, value string) {
-	if h.req.cookies == nil {
-		h.req.cookies = map[string]string{}
-	}
 	h.req.cookies[key] = value
 
 }
@@ -94,6 +91,8 @@ func (h *MHttp) Open(method string, url string) {
 	h.url = url
 	h.method = method
 	h.req.proxy = &http.Transport{}
+	h.req.cookies = map[string]string{}
+	h.req.headers = map[string]string{}
 }
 func (h *MHttp) Send(body interface{}) {
 	switch v := body.(type) {
