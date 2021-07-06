@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"github.com/Mas0nShi/MHttp"
-	"github.com/Mas0nShi/goConsole/console"
 	"sync"
 )
 
@@ -23,7 +23,7 @@ func main() {
 			//http.SetProxy("118.251.115.55:11405")
 			http.SetCookie("ASP.NET_SessionId", "21231313123")
 			http.Send("StudentId=12355566&Name=cxx&acadYears=2020-2021&team=2&type=1")
-			console.Log(http.GetResponseText())
+			fmt.Println(http.GetResponseText())
 			gp.Done()
 		}()
 
