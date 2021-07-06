@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	url2 "net/url"
 	"strings"
 )
@@ -69,9 +70,6 @@ func (h *MHttp) SetCookies(cookies map[string]string) {
 	}
 }
 func (h *MHttp) SetRequestHeader(key string, value string) {
-	if h.req.headers == nil {
-		h.req.headers = map[string]string{}
-	}
 	h.req.headers[key] = value
 }
 func (h *MHttp) SetRequestHeaders(headers map[string]string) {
@@ -91,8 +89,13 @@ func (h *MHttp) Open(method string, url string) {
 	h.url = url
 	h.method = method
 	h.req.proxy = &http.Transport{}
-	h.req.cookies = map[string]string{}
-	h.req.headers = map[string]string{}
+	if h.req.cookies == nil {
+		h.req.cookies = map[string]string{}
+	}
+	if h.req.headers == nil {
+		h.req.headers = map[string]string{}
+	}
+
 }
 func (h *MHttp) Send(body interface{}) {
 	switch v := body.(type) {
@@ -112,22 +115,39 @@ func (h *MHttp) Send(body interface{}) {
 	}
 
 	// set headers
-	if h.req.headers["Content-Type"] == "" {
-		h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
+	if h.req.headers["Accept"] == "" {
+		h.req.headers["Accept"] = "*/*"
+	}
+	if h.req.headers["Accept-Language"] == "" {
+		h.req.headers["Accept-Language"] = "zh-cn"
+	}
+	if h.req.headers["Referer"] == "" {
+		h.req.headers["Referer"] = h.url
+	}
+	if h.method == "POST" {
+		if h.req.headers["Content-Type"] == "" {
+			h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
+		}
 	}
 	for k, v := range h.req.headers {
 		req.Header.Add(k, v)
 	}
 
 	// set cookies
+	jar, _ := cookiejar.New(nil)
+	icookies := make([]*http.Cookie,len(h.req.cookies))
 	if len(h.req.cookies) > 0 {
+		cout := 0
 		for key, value := range h.req.cookies {
-			req.AddCookie(&http.Cookie{Name: key, Value: value, HttpOnly: true})
+			icookies[cout] = &http.Cookie{Name: key,Value: value,HttpOnly: true}
+			cout++
 		}
 	}
+	jar.SetCookies(req.URL, icookies)
 
 	// send http requests
 	client := &http.Client{Transport: h.req.proxy}
+	client.Jar = jar
 	res, err := client.Do(req)
 	if err != nil {
 		panic(err)
