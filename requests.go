@@ -5,27 +5,29 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	url2 "net/url"
 	"strings"
 )
 
 type MHttp struct {
-	Method string
-	Url string
-	res response
-	req request
+	method string
+	url    string
+	res    response
+	req    request
 }
 type request struct {
-	body io.Reader
-	headers  map[string]string
-	cookies  map[string]string
-
+	body    io.Reader
+	headers map[string]string
+	cookies map[string]string
+	proxy   *http.Transport
 }
 type response struct {
-	body  []byte
+	body     []byte
 	httpCode int
 	headers  http.Header
 	cookies  []*http.Cookie
 }
+
 func (h *MHttp) GetHttpCode() int {
 	return h.res.httpCode
 }
@@ -78,10 +80,20 @@ func (h *MHttp) SetRequestHeader(key string, value string) {
 func (h *MHttp) SetRequestHeaders(headers map[string]string) {
 	h.req.headers = headers
 }
+func (h *MHttp) SetProxy(url string) {
+	if url != "" {
+		parse, err := url2.Parse("http://" + url)
+		if err != nil {
+			panic("MHttp/SetProxy error in parse url.")
+		}
+		h.req.proxy = &http.Transport{Proxy: http.ProxyURL(parse)}
+	}
+}
 
-func (h *MHttp) Open(method string, url string)  {
-	h.Url = url
-	h.Method = method
+func (h *MHttp) Open(method string, url string) {
+	h.url = url
+	h.method = method
+	h.req.proxy = &http.Transport{}
 }
 func (h *MHttp) Send(body interface{}) {
 	switch v := body.(type) {
@@ -93,7 +105,7 @@ func (h *MHttp) Send(body interface{}) {
 		panic("body type error.")
 	}
 
-	req, err := http.NewRequest(h.Method, h.Url, h.req.body)
+	req, err := http.NewRequest(h.method, h.url, h.req.body)
 	if err != nil {
 		panic(err)
 	}
@@ -109,12 +121,12 @@ func (h *MHttp) Send(body interface{}) {
 	// set cookies
 	if len(h.req.cookies) > 0 {
 		for key, value := range h.req.cookies {
-			req.AddCookie(&http.Cookie{Name: key,Value: value, HttpOnly: true})
+			req.AddCookie(&http.Cookie{Name: key, Value: value, HttpOnly: true})
 		}
 	}
 
 	// send http requests
-	client := &http.Client{}
+	client := &http.Client{Transport: h.req.proxy}
 	res, err := client.Do(req)
 	if err != nil {
 		panic(err)
