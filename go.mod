@@ -1,3 +1,3 @@
-module github.com/Mas0nShi/MHttp
+module MHttp
 
 go 1.15
