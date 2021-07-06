@@ -101,6 +101,8 @@ func (h *MHttp) Send(body interface{}) {
 		h.req.body = bytes.NewReader(v)
 	case string:
 		h.req.body = strings.NewReader(v)
+	case nil:
+		break
 	default:
 		panic("body type error.")
 	}
