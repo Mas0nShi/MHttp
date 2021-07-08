@@ -85,6 +85,12 @@ func (h *MHttp) SetProxy(url string) {
 	}
 }
 
+func (h MHttp) Clear() {
+	h.req = *new(request)
+	h.res = *new(response)
+	h.method = ""
+	h.url = ""
+}
 func (h *MHttp) Open(method string, url string) {
 	h.url = url
 	h.method = method
