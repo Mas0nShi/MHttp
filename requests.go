@@ -90,7 +90,7 @@ func (h *MHttp) SetProxy(ip string) {
 	}
 }
 
-func (h MHttp) Clear() {
+func (h *MHttp) Clear() {
 	h.req = *new(request)
 	h.res = *new(response)
 	h.method = ""
