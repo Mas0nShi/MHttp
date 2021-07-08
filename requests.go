@@ -75,13 +75,18 @@ func (h *MHttp) SetRequestHeader(key string, value string) {
 func (h *MHttp) SetRequestHeaders(headers map[string]string) {
 	h.req.headers = headers
 }
-func (h *MHttp) SetProxy(url string) {
-	if url != "" {
-		parse, err := url2.Parse("http://" + url)
+func (h *MHttp) SetProxy(ip string) {
+	if ip != "" {
+		if !strings.HasPrefix(ip, "http://") {
+			ip = "http://" + ip
+		}
+		parse, err := url2.Parse(ip)
 		if err != nil {
 			panic("MHttp/SetProxy error in parse url.")
 		}
 		h.req.proxy = &http.Transport{Proxy: http.ProxyURL(parse)}
+	} else {
+		h.req.proxy = &http.Transport{}
 	}
 }
 
@@ -98,10 +103,10 @@ func (h *MHttp) Open(method string, url string) {
 	if h.req.cookies == nil {
 		h.req.cookies = map[string]string{}
 	}
+
 	if h.req.headers == nil {
 		h.req.headers = map[string]string{}
 	}
-	
 	if h.req.headers["Accept"] == "" {
 		h.req.headers["Accept"] = "*/*"
 	}
@@ -111,21 +116,19 @@ func (h *MHttp) Open(method string, url string) {
 	if h.req.headers["Referer"] == "" {
 		h.req.headers["Referer"] = h.url
 	}
-	if h.method == "POST" {
-		if h.req.headers["Content-Type"] == "" {
-			h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
-		}
+	if h.method == "POST" && h.req.headers["Content-Type"] == ""{
+		h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
 	}
 
 }
 func (h *MHttp) Send(body interface{}) {
 	switch v := body.(type) {
-	case []byte:
-		h.req.body = bytes.NewReader(v)
-	case string:
-		h.req.body = strings.NewReader(v)
 	case nil:
 		break
+	case string:
+		h.req.body = strings.NewReader(v)
+	case []byte:
+		h.req.body = bytes.NewReader(v)
 	default:
 		panic("body type error.")
 	}
