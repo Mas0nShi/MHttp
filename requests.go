@@ -95,6 +95,21 @@ func (h *MHttp) Open(method string, url string) {
 	if h.req.headers == nil {
 		h.req.headers = map[string]string{}
 	}
+	
+	if h.req.headers["Accept"] == "" {
+		h.req.headers["Accept"] = "*/*"
+	}
+	if h.req.headers["Accept-Language"] == "" {
+		h.req.headers["Accept-Language"] = "zh-cn"
+	}
+	if h.req.headers["Referer"] == "" {
+		h.req.headers["Referer"] = h.url
+	}
+	if h.method == "POST" {
+		if h.req.headers["Content-Type"] == "" {
+			h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
+		}
+	}
 
 }
 func (h *MHttp) Send(body interface{}) {
@@ -115,20 +130,6 @@ func (h *MHttp) Send(body interface{}) {
 	}
 
 	// set headers
-	if h.req.headers["Accept"] == "" {
-		h.req.headers["Accept"] = "*/*"
-	}
-	if h.req.headers["Accept-Language"] == "" {
-		h.req.headers["Accept-Language"] = "zh-cn"
-	}
-	if h.req.headers["Referer"] == "" {
-		h.req.headers["Referer"] = h.url
-	}
-	if h.method == "POST" {
-		if h.req.headers["Content-Type"] == "" {
-			h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
-		}
-	}
 	for k, v := range h.req.headers {
 		req.Header.Add(k, v)
 	}
@@ -144,7 +145,6 @@ func (h *MHttp) Send(body interface{}) {
 		}
 	}
 	jar.SetCookies(req.URL, icookies)
-
 	// send http requests
 	client := &http.Client{Transport: h.req.proxy}
 	client.Jar = jar
