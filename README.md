@@ -49,6 +49,7 @@ func main() {
     GetResponseHeaders() map[string][]string
     GetCookie(key string) string
     GetCookies() string
+    Clear() 
 
 ## TODO
 -[ ] Map read/write conflict during concurrency
