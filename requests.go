@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
 	url2 "net/url"
 	"strings"
 )
@@ -15,12 +14,15 @@ type MHttp struct {
 	url    string
 	res    response
 	req    request
+
 }
 type request struct {
 	body    io.Reader
 	headers map[string]string
 	cookies map[string]string
-	proxy   *http.Transport
+
+	autoHeaders bool
+	client *http.Client
 }
 type response struct {
 	body     []byte
@@ -84,10 +86,14 @@ func (h *MHttp) SetProxy(ip string) {
 		if err != nil {
 			panic("MHttp/SetProxy error in parse url.")
 		}
-		h.req.proxy = &http.Transport{Proxy: http.ProxyURL(parse)}
+		h.req.client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(parse)}}
 	} else {
-		h.req.proxy = &http.Transport{}
+		h.req.client = new(http.Client)
 	}
+}
+
+func (h *MHttp) AutoHeaders(open bool) {
+	h.req.autoHeaders = open
 }
 
 func (h *MHttp) Clear() {
@@ -99,7 +105,10 @@ func (h *MHttp) Clear() {
 func (h *MHttp) Open(method string, url string) {
 	h.url = url
 	h.method = method
-	h.req.proxy = &http.Transport{}
+
+	if h.req.client == nil {
+		h.req.client = new(http.Client)
+	}
 	if h.req.cookies == nil {
 		h.req.cookies = map[string]string{}
 	}
@@ -107,17 +116,20 @@ func (h *MHttp) Open(method string, url string) {
 	if h.req.headers == nil {
 		h.req.headers = map[string]string{}
 	}
-	if h.req.headers["Accept"] == "" {
-		h.req.headers["Accept"] = "*/*"
-	}
-	if h.req.headers["Accept-Language"] == "" {
-		h.req.headers["Accept-Language"] = "zh-cn"
-	}
-	if h.req.headers["Referer"] == "" {
-		h.req.headers["Referer"] = h.url
-	}
-	if h.method == "POST" && h.req.headers["Content-Type"] == ""{
-		h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
+
+	if h.req.autoHeaders {
+		if h.req.headers["Accept"] == "" {
+			h.req.headers["Accept"] = "*/*"
+		}
+		if h.req.headers["Accept-Language"] == "" {
+			h.req.headers["Accept-Language"] = "zh-cn"
+		}
+		if h.req.headers["Referer"] == "" {
+			h.req.headers["Referer"] = h.url
+		}
+		if h.method == "POST" && h.req.headers["Content-Type"] == ""{
+			h.req.headers["Content-Type"] = "application/x-www-form-urlencoded"
+		}
 	}
 
 }
@@ -139,25 +151,21 @@ func (h *MHttp) Send(body interface{}) {
 	}
 
 	// set headers
-	for k, v := range h.req.headers {
-		req.Header.Add(k, v)
+	if len(h.req.headers) > 0 {
+		for k, v := range h.req.headers {
+			req.Header.Add(k, v)
+		}
 	}
 
 	// set cookies
-	jar, _ := cookiejar.New(nil)
-	icookies := make([]*http.Cookie,len(h.req.cookies))
 	if len(h.req.cookies) > 0 {
-		cout := 0
 		for key, value := range h.req.cookies {
-			icookies[cout] = &http.Cookie{Name: key,Value: value,HttpOnly: true}
-			cout++
+			req.AddCookie(&http.Cookie{Name: key,Value: value, HttpOnly: true})
 		}
 	}
-	jar.SetCookies(req.URL, icookies)
+
 	// send http requests
-	client := &http.Client{Transport: h.req.proxy}
-	client.Jar = jar
-	res, err := client.Do(req)
+	res, err := h.req.client.Do(req)
 	if err != nil {
 		panic(err)
 	}
