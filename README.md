@@ -50,6 +50,7 @@ func main() {
     GetCookie(key string) string
     GetCookies() string
     Clear() 
+    AutoHeaders()
 
 ## TODO
 -[ ] Map read/write conflict during concurrency
